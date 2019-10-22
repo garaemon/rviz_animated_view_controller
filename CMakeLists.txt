@@ -8,18 +8,22 @@ find_package(Boost REQUIRED system filesystem)
 # Ogre
 pkg_check_modules(OGRE OGRE)
 
-# Qt Stuff
-find_package(Qt4 REQUIRED)
-include(${QT_USE_FILE})
-add_definitions(-DQT_NO_KEYWORDS)
-
-find_package(OpenGL REQUIRED)
-
 find_package(catkin REQUIRED COMPONENTS
  rviz
  pluginlib
  view_controller_msgs
 )
+
+# Qt Stuff
+if(rviz_QT_VERSION VERSION_LESS "5")
+  find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
+  include(${QT_USE_FILE})
+else()
+  find_package(Qt5Widgets REQUIRED)
+endif()
+add_definitions(-DQT_NO_KEYWORDS -g)
+
+find_package(OpenGL REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -27,9 +31,11 @@ catkin_package(
   CATKIN_DEPENDS view_controller_msgs
   )
 
-qt4_wrap_cpp(MOC_FILES
-  include/${PROJECT_NAME}/rviz_animated_view_controller.h
-)
+if(rviz_QT_VERSION VERSION_LESS "5")
+  qt4_wrap_cpp(MOC_FILES include/${PROJECT_NAME}/rviz_animated_view_controller.h)
+else()
+  qt5_wrap_cpp(MOC_FILES include/${PROJECT_NAME}/rviz_animated_view_controller.h)
+endif()
 
 include_directories(include
                     ${catkin_INCLUDE_DIRS}
@@ -42,8 +48,14 @@ include_directories(include
 add_library(${PROJECT_NAME}
   src/rviz_animated_view_controller.cpp
   ${MOC_FILES})
-target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${OGRE_LIBRARIES}
-                                      ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+if(rviz_QT_VERSION VERSION_LESS "5")
+  target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${OGRE_LIBRARIES}
+    ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+else()
+  target_link_libraries(${PROJECT_NAME} Qt5::Widgets ${OGRE_LIBRARIES}
+    ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+endif()
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION} PATTERN ".svn" EXCLUDE)
@@ -57,4 +69,3 @@ install(TARGETS ${PROJECT_NAME}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
-
